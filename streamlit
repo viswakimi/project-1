@@ -1,0 +1,120 @@
+# Importing libraries
+import pandas as pd
+import mysql.connector
+import streamlit as slt
+from streamlit_option_menu import option_menu
+
+# Load route data
+def load_routes(file_paths):
+    routes = {}
+    for state, path in file_paths.items():
+        df = pd.read_csv(path)
+        routes[state] = df["Route_name"].tolist()
+    return routes
+
+# File paths for each state
+file_paths = {
+    "Kerala": "df_k.csv",
+    "Andhra Pradesh": "df_A.csv",
+    "Telangana": "df_T.csv",
+    "Goa": "df_G.csv",
+    "Rajasthan": "df_R.csv",
+    "South Bengal": "df_SB.csv",
+    "Haryana": "df_H.csv",
+    "Assam": "df_AS.csv",
+    "Uttar Pradesh": "df_UP.csv",
+    "West Bengal": "df_WB.csv"
+}
+
+# Load all route lists
+routes = load_routes(file_paths)
+
+# Set up Streamlit page
+slt.set_page_config(layout="wide")
+
+# Navigation Menu
+web = option_menu(
+    menu_title="🚌OnlineBus",
+    options=["Home", "📍States and Routes"],
+    icons=["house", "info-circle"],
+    orientation="horizontal"
+)
+
+# Home Page
+if web == "Home":
+    slt.title("Redbus Data Scraping with Selenium & Dynamic Filtering using Streamlit")
+    slt.subheader(":blue[Domain:]  Transportation")
+    slt.markdown("The 'Redbus Data Scraping and Filtering with Streamlit Application' aims to revolutionize the transportation industry...")
+    # Add more descriptive content as needed
+
+# States and Routes Page
+if web == "📍States and Routes":
+    # State Selection
+    S = slt.selectbox("Lists of States", list(routes.keys()))
+
+    # Bus Type and Fare Range
+    col1, col2 = slt.columns(2)
+    with col1:
+        select_type = slt.radio("Choose bus type", ["sleeper", "semi-sleeper", "others"])
+    with col2:
+        select_fare = slt.radio("Choose bus fare range", ["50-1000", "1000-2000", "2000 and above"])
+
+    # Time Input
+    TIME = slt.time_input("Select the time")
+    time_str = TIME.strftime('%H:%M:%S')  # Convert to string
+
+    # Route Selection
+    route = slt.selectbox("List of routes", routes[S])
+
+    # Define a reusable function for filtering
+    def filter_buses(route_name, bus_type, fare_range):
+        conn = mysql.connector.connect(
+            host="localhost", user="root", password="root", database="RED_BUS_DETAILS"
+        )
+        my_cursor = conn.cursor()
+
+        # Fare range
+        if fare_range == "50-1000":
+            fare_min, fare_max = 50, 1000
+        elif fare_range == "1000-2000":
+            fare_min, fare_max = 1000, 2000
+        else:
+            fare_min, fare_max = 2000, 100000
+
+        # Bus type condition
+        if bus_type == "sleeper":
+            bus_type_condition = "Bus_type LIKE '%Sleeper%'"
+        elif bus_type == "semi-sleeper":
+            bus_type_condition = "Bus_type LIKE '%A/c Semi Sleeper%'"
+        else:
+            bus_type_condition = "Bus_type NOT LIKE '%Sleeper%' AND Bus_type NOT LIKE '%Semi-Sleeper%'"
+
+        # SQL Query
+        query = f"""
+            SELECT * FROM bus_details
+            WHERE Price BETWEEN {fare_min} AND {fare_max}
+            AND Route_name = '{route_name}'
+            AND {bus_type_condition}
+            AND Start_time >= '{time_str}'
+            ORDER BY Price DESC, Start_time ASC
+        """
+        my_cursor.execute(query)
+        result = my_cursor.fetchall()
+        conn.close()
+
+        # Create DataFrame
+        if result:
+            df = pd.DataFrame(result, columns=[
+                "ID", "Bus_name", "Bus_type", "Start_time", "End_time",
+                "Total_duration", "Price", "Seats_Available", "Ratings", "Route_link", "Route_name"
+            ])
+            return df
+        else:
+            return pd.DataFrame(columns=[
+                "ID", "Bus_name", "Bus_type", "Start_time", "End_time",
+                "Total_duration", "Price", "Seats_Available", "Ratings", "Route_link", "Route_name"
+            ])
+
+    # Filter and Display Results
+    result_df = filter_buses(route, select_type, select_fare)
+    slt.dataframe(result_df)
