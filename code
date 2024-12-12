@@ -1,0 +1,32 @@
+data = yaml.safe_load(file)
+combined_data.append(pd.DataFrame(data))
+combined_df = pd.concat(combined_data, ignore_index=True)
+
+df['date'] = pd.to_datetime(df['date'])
+df['year'] = df['date'].dt.year
+
+
+df = pd.read_csv(merged_file)
+df1=merged_data.to_csv('df.csv', index=False)  # Save the DataFrame to CSV
+
+df1 = pd.merge(df1, other_df, how='left', on='key_column')
+df.fillna({'daily_return': 0, 'cumulative_return': 0}, inplace=True)
+
+df = df.drop(columns=['open_y', 'close_y', 'monthly_return'])
+df1 = df1.rename(columns
+df['date'] = pd.to_datetime(df['date'], errors='coerce')
+df.dropna(subset=['date'])
+(df['date'].isnull().sum())  
+
+
+cursor.execute(insert_query, tuple(row))
+
+
+
+name error--> not defined
+localbounderror-->variable connection is never initialized
+
+
+merged_data = pd.merge(merged_data, monthly_data, on=['Ticker', 'month'], how='left')
+
+merged_data.loc[merged_data['Ticker'].isin(top_10_green['Ticker']), 'rank'] = 'Top Green'
