@@ -1,0 +1,40 @@
+yearly_data = df.groupby(['Ticker', 'year']).agg(
+            first_open=('open', 'first'),
+            last_close=('close', 'last')
+        ).reset_index()
+
+yearly_data['yearly_return'] = ((yearly_data['last_close'] - yearly_data['first_open']) / 
+                                        yearly_data['first_open']) * 100
+
+
+        top_10_green = yearly_data.nlargest(10, 'yearly_return').assign(rank='Top Green')
+        top_10_red = yearly_data.nsmallest(10, 'yearly_return').assign(rank='Top Red')
+
+
+
+        print("Calculating volatility...")
+        df['daily_return'] = df.groupby('Ticker')['close'].pct_change()
+        volatility = df.groupby('Ticker')['daily_return'].std().reset_index().rename(
+            columns={'daily_return': 'volatility'}
+        )
+
+        # Calculate cumulative return
+        df['cumulative_return'] = df.groupby('Ticker')['daily_return'].cumsum()
+
+        # Monthly returns
+        print("Calculating monthly returns...")
+        df['month'] = df['date'].dt.to_period('M')
+        monthly_data = df.groupby(['Ticker', 'month']).agg(
+            open=('open', 'first'),
+            close=('close', 'last')
+        ).reset_index()
+        monthly_data['monthly_return'] = ((monthly_data['close'] - monthly_data['open']) / 
+                                          monthly_data['open']) * 100
+
+
+
+
+
+
+
+                                          
